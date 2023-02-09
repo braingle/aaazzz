@@ -1,0 +1,60 @@
+# Load the AzureAD module
+
+Import-Module AzureAD
+
+# Connect to Azure AD
+
+Connect-AzureAD
+
+# Get all PIM role assignments
+
+$pimAssignments = Get-AzureADServicePrincipalPrivilegedRoleAssignment | Select-Object RoleTemplateId, RoleDisplayName, ObjectId, TrustedSignInAudience
+
+# Loop through each PIM role assignment
+
+foreach ($pimAssignment in $pimAssignments)
+
+{
+
+    # Get the user or group that was assigned the role
+
+    $principal = Get-AzureADObjectById -ObjectId $pimAssignment.ObjectId
+
+    
+
+    # Display the role assignment information
+
+    Write-Output "Role: $($pimAssignment.RoleDisplayName) Assigned to: $($principal.DisplayName) ($($principal.UserPrincipalName)) Start time: $($pimAssignment.StartTime) End time: $($pimAssignment.EndTime)"
+
+}
+
+
+
+
+
+# Load the AzureRM module
+Import-Module AzureRM
+
+# Connect to Azure
+Connect-AzureRmAccount
+
+# Get all Azure subscriptions
+$subscriptions = Get-AzureRmSubscription | Select-Object SubscriptionId, SubscriptionName
+
+# Loop through each subscription
+foreach ($subscription in $subscriptions)
+{
+    # Set the current subscription
+    Set-AzureRmContext -SubscriptionId $subscription.SubscriptionId
+
+    # Get all role assignments in the subscription
+    $roleAssignments = Get-AzureRmRoleAssignment | Select-Object DisplayName, RoleDefinitionName, SignInName
+
+    # Loop through each role assignment
+    foreach ($roleAssignment in $roleAssignments)
+    {
+        # Display the role assignment information
+        Write-Output "Subscription: $($subscription.SubscriptionName) Role: $($roleAssignment.RoleDefinitionName) Assigned to: $($roleAssignment.DisplayName) ($($roleAssignment.SignInName))"
+    }
+}
+
