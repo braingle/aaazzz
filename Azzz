@@ -1,0 +1,55 @@
+# Load the AzureRM module
+Import-Module AzureRM
+
+# Connect to Azure
+Connect-AzureRmAccount
+
+# Get all Azure subscriptions
+$subscriptions = Get-AzureRmSubscription | Select-Object Id, TenantId, SubscriptionName
+
+# Initialize an array to store the policy information
+$policies = @()
+
+# Loop through each subscription
+foreach ($subscription in $subscriptions)
+{
+    # Set the current subscription
+    Set-AzureRmContext -SubscriptionId $subscription.Id
+
+    # Get all policy definitions in the subscription
+    $policyDefinitions = Get-AzureRmPolicyDefinition | Select-Object PolicyName, Description, PolicyType, Category, Mode, Metadata
+
+    # Get all policy states in the subscription
+    $policyStates = Get-AzureRmPolicyState | Select-Object SubscriptionId, PolicyAssignmentName, PolicyDefinitionName, ResourceGroupName, ResourceType, ResourceName, PolicyEvaluationTime, ComplianceState, ComplianceLevel, IsCompliant, Effect
+
+    # Loop through each policy state
+    foreach ($policyState in $policyStates)
+    {
+        # Get the corresponding policy definition
+        $policyDefinition = $policyDefinitions | Where-Object { $_.PolicyName -eq $policyState.PolicyDefinitionName }
+
+        # Create an object to store the policy information
+        $policy = New-Object -TypeName PSObject
+        $policy | Add-Member -Type NoteProperty -Name SubscriptionId -Value $policyState.SubscriptionId
+        $policy | Add-Member -Type NoteProperty -Name PolicyDefinitionName -Value $policyState.PolicyDefinitionName
+        $policy | Add-Member -Type NoteProperty -Name PolicyType -Value $policyDefinition.PolicyType
+        $policy | Add-Member -Type NoteProperty -Name Category -Value $policyDefinition.Category
+        $policy | Add-Member -Type NoteProperty -Name Mode -Value $policyDefinition.Mode
+        $policy | Add-Member -Type NoteProperty -Name Metadata -Value $policyDefinition.Metadata
+        $policy | Add-Member -Type NoteProperty -Name PolicyAssignmentName -Value $policyState.PolicyAssignmentName
+        $policy | Add-Member -Type NoteProperty -Name ResourceGroupName -Value $policyState.ResourceGroupName
+        $policy | Add-Member -Type NoteProperty -Name ResourceType -Value $policyState.ResourceType
+        $policy | Add-Member -Type NoteProperty -Name ResourceName -Value $policyState.ResourceName
+        $policy | Add-Member -Type NoteProperty -Name PolicyEvaluationTime -Value $policyState.PolicyEvaluationTime
+        $policy | Add-Member -Type NoteProperty -Name ComplianceState -Value $policyState.ComplianceState
+        $policy | Add-Member -Type NoteProperty -Name ComplianceLevel -Value $policyState.ComplianceLevel
+        $policy | Add-Member -Type NoteProperty -Name IsCompliant -Value $policyState.IsCompliant
+        $policy | Add-Member -Type NoteProperty -Name Effect -Value $policyState.Effect
+
+        # Add the policy to the array
+        $policies += $policy
+    }
+}
+
+# Export the policies to a CSV file
+$policies | Export-
