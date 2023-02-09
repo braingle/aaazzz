@@ -1,0 +1,68 @@
+# Load the AzureRM module
+
+Import-Module AzureRM
+
+# Connect to Azure
+
+Connect-AzureRmAccount
+
+# Get all Azure subscriptions
+
+$subscriptions = Get-AzureRmSubscription | Select-Object SubscriptionId, SubscriptionName
+
+# Create an array to store the policy information
+
+$policyInformation = @()
+
+# Loop through each subscription
+
+foreach ($subscription in $subscriptions)
+
+{
+
+    # Set the current subscription
+
+    Set-AzureRmContext -SubscriptionId $subscription.SubscriptionId
+
+    # Get all policy definitions in the subscription
+
+    $policyDefinitions = Get-AzureRmPolicyDefinition | Select-Object PolicyDefinitionName, PolicyType, DisplayName, PolicySetDefinitionName, PolicySetDefinitionType
+
+    # Loop through each policy definition
+
+    foreach ($policyDefinition in $policyDefinitions)
+
+    {
+
+        # Get the policy state for the policy definition
+
+        $policyState = Get-AzureRmPolicyState -PolicyDefinitionName $policyDefinition.PolicyDefinitionName
+
+        # Create an object to store the policy information
+
+        $policyInfo = New-Object -TypeName PSObject
+
+        $policyInfo | Add-Member -MemberType NoteProperty -Name "Policy Definition Name" -Value $policyDefinition.PolicyDefinitionName
+
+        $policyInfo | Add-Member -MemberType NoteProperty -Name "Policy Type" -Value $policyDefinition.PolicyType
+
+        $policyInfo | Add-Member -MemberType NoteProperty -Name "Display Name" -Value $policyDefinition.DisplayName
+
+        $policyInfo | Add-Member -MemberType NoteProperty -Name "Policy Set Name" -Value $policyDefinition.PolicySetDefinitionName
+
+        $policyInfo | Add-Member -MemberType NoteProperty -Name "Policy Set Type" -Value $policyDefinition.PolicySetDefinitionType
+
+        $policyInfo | Add-Member -MemberType NoteProperty -Name "Policy State" -Value $policyState.State
+
+        # Add the policy information to the array
+
+        $policyInformation += $policyInfo
+
+    }
+
+}
+
+# Export the policy information to a CSV file
+
+$policyInformation | Export-Csv -Path "AzurePolicyInformation.csv" -NoTypeInformation
+
