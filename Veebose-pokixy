@@ -1,0 +1,69 @@
+# Import the Azure modules
+Write-Verbose "Importing the Azure modules..."
+Import-Module Az.Accounts
+Import-Module Az.PolicyInsights
+
+# Connect to Azure
+Write-Verbose "Connecting to Azure..."
+Connect-AzAccount
+
+# Get all the subscriptions
+Write-Verbose "Getting all the subscriptions..."
+$subscriptions = Get-AzSubscription
+
+# Create an empty array to store the policy data
+Write-Verbose "Creating an array to store the policy data..."
+$policyData = @()
+
+# Loop through the subscriptions
+Write-Verbose "Looping through the subscriptions..."
+foreach ($subscription in $subscriptions)
+{
+    # Set the current subscription
+    Write-Verbose "Setting the current subscription: $($subscription.Name)..."
+    Select-AzSubscription -SubscriptionId $subscription.Id
+
+    # Get all the policy set definitions for the subscription
+    Write-Verbose "Getting all the policy set definitions for the subscription: $($subscription.Name)..."
+    $policySetDefinitions = Get-AzPolicySetDefinition -ExpandProperties
+
+    # Loop through the policy set definitions
+    Write-Verbose "Looping through the policy set definitions for the subscription: $($subscription.Name)..."
+    foreach ($policySetDefinition in $policySetDefinitions)
+    {
+        # Get the policy states for the policy set definition
+        Write-Verbose "Getting the policy states for the policy set definition: $($policySetDefinition.Name)..."
+        $policyStates = Get-AzPolicyState -PolicySetDefinitionName $policySetDefinition.Name
+
+        # Loop through the policy states
+        Write-Verbose "Looping through the policy states for the policy set definition: $($policySetDefinition.Name)..."
+        foreach ($policyState in $policyStates)
+        {
+            # Create a custom object to store the policy data
+            Write-Verbose "Creating a custom object to store the policy data..."
+            $policy = [PSCustomObject] @{
+                "SubscriptionName" = $subscription.Name
+                "PolicySetDefinitionName" = $policySetDefinition.Name
+                "DisplayName" = $policySetDefinition.DisplayName
+                "Description" = $policySetDefinition.Description
+                "PolicyType" = $policySetDefinition.PolicyType
+                "PolicyRule" = $policySetDefinition.PolicyRule
+                "PolicyStateName" = $policyState.Name
+                "ResourceId" = $policyState.ResourceId
+                "IsCompliant" = $policyState.IsCompliant
+            }
+
+            # Add the policy data to the array
+            Write-Verbose "Adding the policy data to the array..."
+            $policyData += $policy
+        }
+    }
+}
+
+# Export the policy data to an Excel file
+Write-Verbose "Exporting the policy data to an Excel file..."
+$policyData | Export-Csv -Path "PolicyData.csv" -NoTypeInformation
+
+# Open the Excel file
+Write-Verbose "Opening the Excel file..."
+Start-Process "PolicyData.csv"
