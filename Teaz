@@ -1,0 +1,86 @@
+# Load the AzureRM module
+
+Import-Module AzureRM
+
+# Connect to Azure
+
+Connect-AzureRmAccount
+
+# Get all Azure subscriptions
+
+$subscriptions = Get-AzureRmSubscription | Select-Object Id, TenantId, SubscriptionName
+
+# Initialize an array to store the policy information
+
+$policies = @()
+
+# Loop through each subscription
+
+foreach ($subscription in $subscriptions)
+
+{
+
+    # Set the current subscription
+
+    Set-AzureRmContext -SubscriptionId $subscription.Id
+
+    # Get all policy definitions in the subscription
+
+    $policyDefinitions = Get-AzureRmPolicyDefinition | Select-Object PolicyName, PolicyType, Properties
+
+    # Get all policy states in the subscription
+
+    $policyStates = Get-AzureRmPolicyState | Select-Object PolicyAssignmentName, PolicyDefinitionName, ComplianceState, ComplianceLevel, IsCompliant
+
+    # Loop through each policy state
+
+    foreach ($policyState in $policyStates)
+
+    {
+
+        # Get the corresponding policy definition
+
+        $policyDefinition = $policyDefinitions | Where-Object { $_.PolicyName -eq $policyState.PolicyDefinitionName }
+
+        # Get the display name and policy set information
+
+        $displayName = $policyDefinition.Properties.displayName
+
+        $policySetName = $policyDefinition.Properties.policySetName
+
+        $policySetType = $policyDefinition.Properties.policySetDefinition.policyType
+
+        # Create an object to store the policy information
+
+        $policy = New-Object -TypeName PSObject
+
+        $policy | Add-Member -Type NoteProperty -Name PolicyDefinitionName -Value $policyDefinition.PolicyName
+
+        $policy | Add-Member -Type NoteProperty -Name PolicyType -Value $policyDefinition.PolicyType
+
+        $policy | Add-Member -Type NoteProperty -Name DisplayName -Value $displayName
+
+        $policy | Add-Member -Type NoteProperty -Name PolicySetName -Value $policySetName
+
+        $policy | Add-Member -Type NoteProperty -Name PolicySetType -Value $policySetType
+
+        $policy | Add-Member -Type NoteProperty -Name PolicyAssignmentName -Value $policyState.PolicyAssignmentName
+
+        $policy | Add-Member -Type NoteProperty -Name ComplianceState -Value $policyState.ComplianceState
+
+        $policy | Add-Member -Type NoteProperty -Name ComplianceLevel -Value $policyState.ComplianceLevel
+
+        $policy | Add-Member -Type NoteProperty -Name IsCompliant -Value $policyState.IsCompliant
+
+        # Add the policy to the array
+
+        $policies += $policy
+
+    }
+
+}
+
+# Export the policies to a CSV file
+
+$policies | Export-Csv -Path ".\policies.csv" -NoTypeInformation
+
