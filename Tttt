@@ -1,0 +1,101 @@
+# Import the Azure RM modules
+
+Import-Module AzureRM
+
+# Connect to your Azure account
+
+Connect-AzureRmAccount
+
+# Get all subscriptions
+
+$subscriptions = Get-AzureRmSubscription
+
+# Create an empty array to store policy definitions and policy states
+
+$policyData = @()
+
+# Loop through each subscription
+
+foreach ($subscription in $subscriptions)
+
+{
+
+    # Set the context to the current subscription
+
+    Select-AzureRmSubscription -SubscriptionId $subscription.Id
+
+    # Get all policy definitions in the current subscription
+
+    $policyDefinitions = Get-AzureRmPolicyDefinition | Select-Object -Property PolicyType, PolicyDefinitionId, DisplayName, Description, PolicyRule
+
+    # Get all policy states in the current subscription
+
+    $policyStates = Get-AzureRmPolicyState | Select-Object -Property SubscriptionId, ResourceGroupName, ResourceType, ResourceName, PolicyAssignmentId, PolicyDefinitionId, PolicyEvaluationId, ResourceId, PolicySetDefinitionId, PolicyDefinitionDisplayName, EffectiveParameters, IsCompliant, Details
+
+    # Combine the policy definitions and policy states for the current subscription
+
+    $subscriptionPolicyData = foreach ($policyDefinition in $policyDefinitions)
+
+    {
+
+        foreach ($policyState in $policyStates)
+
+        {
+
+            if ($policyState.PolicyDefinitionId -eq $policyDefinition.PolicyDefinitionId)
+
+            {
+
+                $row = [PSCustomObject]@{
+
+                    SubscriptionId = $subscription.Id
+
+                    PolicyDefinitionId = $policyDefinition.PolicyDefinitionId
+
+                    DisplayName = $policyDefinition.DisplayName
+
+                    Description = $policyDefinition.Description
+
+                    PolicyRule = $policyDefinition.PolicyRule
+
+                    ResourceGroupName = $policyState.ResourceGroupName
+
+                    ResourceType = $policyState.ResourceType
+
+                    ResourceName = $policyState.ResourceName
+
+                    PolicyAssignmentId = $policyState.PolicyAssignmentId
+
+                    PolicyEvaluationId = $policyState.PolicyEvaluationId
+
+                    ResourceId = $policyState.ResourceId
+
+                    PolicySetDefinitionId = $policyState.PolicySetDefinitionId
+
+                    PolicyDefinitionDisplayName = $policyState.PolicyDefinitionDisplayName
+
+                    EffectiveParameters = $policyState.EffectiveParameters
+
+                    IsCompliant = $policyState.IsCompliant
+
+                    Details = $policyState.Details
+
+                }
+
+                $row
+
+            }
+
+        }
+
+    }
+
+    # Add the policy data for the current subscription to the policy data array
+
+    $policyData += $subscriptionPolicyData
+
+}
+
+# Save the policy data array to an Excel file
+
+$policyData | Export-Excel -Path "PolicyData.xlsx"
