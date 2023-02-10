@@ -1,0 +1,82 @@
+# Import the Azure modules
+
+Import-Module Az.Accounts
+
+Import-Module Az.PolicyInsights
+
+# Connect to Azure
+
+Connect-AzAccount
+
+# Get the subscription
+
+$subscription = Get-AzSubscription -SubscriptionName "<SubscriptionName>"
+
+# Set the current subscription
+
+Select-AzSubscription -SubscriptionId $subscription.Id
+
+# Get all the policy set definitions for the subscription
+
+$policySetDefinitions = Get-AzPolicySetDefinition -ExpandProperties
+
+# Create an empty array to store the policy data
+
+$policyData = @()
+
+# Loop through the policy set definitions
+
+foreach ($policySetDefinition in $policySetDefinitions)
+
+{
+
+    # Get the policy states for the policy set definition
+
+    $policyStates = Get-AzPolicyState -PolicySetDefinitionName $policySetDefinition.Name
+
+    # Loop through the policy states
+
+    foreach ($policyState in $policyStates)
+
+    {
+
+        # Create a custom object to store the policy data
+
+        $policy = [PSCustomObject] @{
+
+            "SubscriptionName" = $subscription.Name
+
+            "PolicySetDefinitionName" = $policySetDefinition.Name
+
+            "DisplayName" = $policySetDefinition.DisplayName
+
+            "Description" = $policySetDefinition.Description
+
+            "PolicyType" = $policySetDefinition.PolicyType
+
+            "PolicyRule" = $policySetDefinition.PolicyRule
+
+            "PolicyStateName" = $policyState.Name
+
+            "ResourceId" = $policyState.ResourceId
+
+            "IsCompliant" = $policyState.IsCompliant
+
+        }
+
+        # Add the policy data to the array
+
+        $policyData += $policy
+
+    }
+
+}
+
+# Export the policy data to an Excel file
+
+$policyData | Export-Csv -Path "PolicyData.csv" -NoTypeInformation
+
+# Open the Excel file
+
+Start-Process "PolicyData.csv"
+
