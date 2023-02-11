@@ -1,0 +1,52 @@
+# Login to Azure
+
+Connect-AzAccount
+
+# Get a list of all subscriptions
+
+$subscriptions = Get-AzSubscription
+
+# Create an array to store the policy information
+
+$policyData = @()
+
+# Loop through each subscription
+
+foreach ($subscription in $subscriptions) {
+
+    # Set the context to the current subscription
+
+    Select-AzSubscription -SubscriptionId $subscription.SubscriptionId
+
+    # Get a list of all policy definitions for the subscription
+
+    $policyDefinitions = Get-AzPolicyDefinition
+
+    # Loop through each policy definition
+
+    foreach ($policyDefinition in $policyDefinitions) {
+
+        # Get the policy state for the policy definition
+
+        $policyState = Get-AzPolicyState -PolicyDefinitionId $policyDefinition.Id
+
+        # Add the policy information to the array
+
+        $policyData += [PSCustomObject]@{
+
+            Subscription = $subscription.SubscriptionName
+
+            PolicyDefinition = $policyDefinition.DisplayName
+
+            PolicyState = $policyState.PolicyAssignment.DisplayName
+
+        }
+
+    }
+
+}
+
+# Export the policy information to a CSV file
+
+$policyData | Export-Csv -Path "policyInformation.csv" -NoTypeInformation
+
