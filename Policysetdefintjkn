@@ -1,0 +1,43 @@
+# Authenticate with Azure
+Connect-AzAccount
+
+# Get a list of all the management groups in the directory
+$managementGroups = Get-AzManagementGroup
+
+# Initialize an empty array to hold the policy data
+$policyData = @()
+
+# Loop through each management group
+foreach ($managementGroup in $managementGroups) {
+    # Get a list of all the subscriptions in the management group
+    $subscriptions = Get-AzSubscription -TenantId $managementGroup.TenantId -SubscriptionId $managementGroup.Id -All
+
+    # Loop through each subscription
+    foreach ($subscription in $subscriptions) {
+        # Select the subscription
+        Select-AzSubscription $subscription.Id
+
+        # Get a list of all the policy definitions in the subscription
+        $policyDefinitions = Get-AzPolicyDefinition
+
+        # Get a list of all the policy states in the subscription
+        $policyStates = Get-AzPolicyState
+
+        # Loop through each policy definition
+        foreach ($policyDefinition in $policyDefinitions) {
+            # Find the policy state that corresponds to the policy definition
+            $policyState = $policyStates | Where-Object {$_.PolicyDefinitionId -eq $policyDefinition.Id}
+
+            # Add the policy data to the array
+            $policyData += [PSCustomObject]@{
+                'DisplayName' = $policyDefinition.DisplayName
+                'DefinitionId' = $policyDefinition.Id
+                'ComplianceStatus' = $policyState.ComplianceState
+                'ManagementGroup' = $managementGroup.DisplayName
+            }
+        }
+    }
+}
+
+# Export the policy data to a CSV file
+$policyData | Export-Csv -Path 'policy_data.csv' -NoTypeInformation
