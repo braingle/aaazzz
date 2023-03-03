@@ -1,0 +1,71 @@
+# Install the required Azure PowerShell module if not already installed
+if (-not (Get-Module -Name Az.Resources -ListAvailable)) {
+    Install-Module -Name Az.Resources -Scope CurrentUser -Force
+}
+
+# Set the output CSV file path
+$outputFilePath = "policy-definitions.csv"
+
+# Get all Azure subscriptions
+$subscriptions = Get-AzSubscription | Select-Object SubscriptionId
+
+# Loop through each subscription and export its policy definitions
+$results = foreach ($subscription in $subscriptions) {
+    $subscriptionId = $subscription.SubscriptionId
+
+    # Set the current subscription context
+    Set-AzContext -Subscription $subscriptionId | Out-Null
+
+    # Get all policy definitions
+    $policyDefinitions = Get-AzPolicyDefinition | Select-Object Name, Description, PolicyType, Mode, Metadata
+
+    # Add the subscription ID to each row
+    $policyDefinitions | Add-Member -NotePropertyName "SubscriptionId" -NotePropertyValue $subscriptionId -PassThru
+}
+
+# Export the results to a CSV file
+$results | Export-Csv -Path $outputFilePath -NoTypeInformation
+
+
+
+# Install the required Azure PowerShell module if not already installed
+if (-not (Get-Module -Name Az.Resources -ListAvailable)) {
+    Install-Module -Name Az.Resources -Scope CurrentUser -Force
+}
+
+# Set the output CSV file path
+$outputFilePath = "policy-states-export.csv"
+
+# Get all Azure subscriptions
+$subscriptions = Get-AzSubscription | Select-Object SubscriptionId
+
+# Loop through each subscription and export its policy states
+$results = foreach ($subscription in $subscriptions) {
+    $subscriptionId = $subscription.SubscriptionId
+
+    # Set the current subscription context
+    Set-AzContext -Subscription $subscriptionId | Out-Null
+
+    # Get all policy states
+    $policyStates = Get-AzPolicyState | Select-Object PolicyDefinitionName, DisplayName, Description, PolicyDefinitionReferenceId, ResourceId, PolicySetDefinitionName, PolicyAssignmentId, PolicySetDefinitionId, PolicyDefinitionId, SubscriptionId, IsCompliant, EnforcementMode, CreatedOn, LastUpdatedOn, PolicyDecision, AdditionalProperties
+
+    # Add the subscription ID to each row
+    $policyStates | Add-Member -NotePropertyName "SubscriptionId" -NotePropertyValue $subscriptionId -PassThru
+}
+
+# Export the results to a CSV file
+$results | Export-Csv -Path $outputFilePath -NoTypeInformation
+
+
+
+
+
+# Import the policy definitions and policy states CSV files
+$policyDefinitions = Import-Csv -Path "policy-definitions.csv"
+$policyStates = Import-Csv -Path "policy-states-export.csv"
+
+# Join the two data sets on the PolicyDefinitionName property
+$combinedData = Join-Object -Left $policyStates -Right $policyDefinitions -LeftJoinProperty "PolicyDefinitionName" -RightJoinProperty "Name"
+
+# Export the combined data to a new CSV file
+$combinedData | Export-Csv -Path "combined-policy-data.csv" -NoTypeInformation
