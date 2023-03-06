@@ -1,0 +1,58 @@
+# Install the required Azure PowerShell module if not already installed
+
+if (-not (Get-Module -Name Az.Resources -ListAvailable)) {
+
+    Install-Module -Name Az.Resources -Scope CurrentUser -Force
+
+}
+
+# Set the output CSV file path
+
+$outputFilePath = "policy-export.csv"
+
+# Get all Azure subscriptions
+
+$subscriptions = Get-AzSubscription | Select-Object SubscriptionId
+
+# Initialize an empty array to hold the policy data
+
+$policyData = @()
+
+# Loop through each subscription and export its policy definitions and policy states
+
+foreach ($subscription in $subscriptions) {
+
+    $subscriptionId = $subscription.SubscriptionId
+
+    # Set the current subscription context
+
+    Set-AzContext -Subscription $subscriptionId | Out-Null
+
+    # Get all policy definitions
+
+    $policyDefinitions = Get-AzPolicyDefinition | Select-Object Name, Description, PolicyType, Mode, Metadata, Id, @{n="DisplayName";e={$_.Properties.DisplayName}}
+
+    # Get all policy states
+
+    $policyStates = Get-AzPolicyState | Select-Object PolicyDefinitionName, DisplayName, Description, PolicyDefinitionReferenceId, ResourceId, PolicySetDefinitionName, PolicyAssignmentId, PolicySetDefinitionId, PolicyDefinitionId, SubscriptionId, IsCompliant, EnforcementMode, CreatedOn, LastUpdatedOn, PolicyDecision, AdditionalProperties
+
+    # Add the subscription ID to each policy definition row
+
+    $policyDefinitions | Add-Member -NotePropertyName "SubscriptionId" -NotePropertyValue $subscriptionId -PassThru
+
+    # Add the subscription ID to each policy state row
+
+    $policyStates | Add-Member -NotePropertyName "SubscriptionId" -NotePropertyValue $subscriptionId -PassThru
+
+    # Append the policy data to the array
+
+    $policyData += $policyDefinitions
+
+    $policyData += $policyStates
+
+}
+
+# Export the policy data to a CSV file
+
+$policyData | Export-Csv -Path $outputFilePath -NoTypeInformation
+
