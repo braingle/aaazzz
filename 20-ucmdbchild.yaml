@@ -1,0 +1,41 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description:
+ 'Create service role with correct policy (customized for UCMDB read-only probes)'
+Parameters:
+    GSICode:
+        Description: GSI code of the application requiring this role (X18 for UCMDB)
+        Type: String
+        Default: x18
+    ServiceName:
+        Description: Name of the service (will be concatenated into group, policy and user names)
+        Type: String
+        Default: ucmdb_probe_childreadonlyrole
+Resources:
+  NewPolicy:
+    Type: "AWS::IAM::ManagedPolicy"
+    Properties:
+      ManagedPolicyName: !Sub 'mufg_${GSICode}_${ServiceName}'
+      PolicyDocument:
+              Version: '2012-10-17'
+              Statement:
+                -
+                  Sid: AllowParentToAssumeCrossAccountChildRole
+                  Effect: Allow
+                  Action: sts:AssumeRole
+                  Resource: arn:aws:iam::343816052288:user/awssvc_x18_ucmdb_probe_readonly
+
+  NewRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      RoleName: !Sub 'awsrole_${GSICode}_${ServiceName}'
+      ManagedPolicyArns:
+      - !Ref NewPolicy
+      AssumeRolePolicyDocument:
+        Statement:
+          -
+            Effect: Allow
+            Principal:
+              AWS:
+                - arn:aws:iam::343816052288:user/awssvc_x18_ucmdb_probe_readonly
+            Action:
+              - "sts:AssumeRole"
