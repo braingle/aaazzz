@@ -1,0 +1,17 @@
+Connect-AzAccount
+$services = Get-AzResource | Where-Object { $_.State -eq 'Running' }
+
+
+$slaList = @()
+
+foreach ($service in $services) {
+
+    $sla = Get-AzServiceLevelObjective -ResourceId $service.ResourceId
+
+    $slaList += $sla
+
+}
+
+$slaList | Export-Csv -Path "C:\SLAReport.csv" -NoTypeInformation
+
+
