@@ -1,0 +1,26 @@
+# Login to your Azure account
+
+Connect-AzAccount
+
+# Get all Azure services
+
+$services = Get-AzResource | Where-Object { $_.ResourceType -like "Microsoft.*/*" } | Select-Object -ExpandProperty ResourceType -Unique
+
+# Get the uptime for each service
+
+foreach ($service in $services) {
+
+    $serviceUptime = Get-AzMetric -ResourceId "/subscriptions/{subscriptionId}/providers/$service" -TimeRangeStartTime (Get-Date).AddDays(-1) -TimeRangeEndTime (Get-Date) -MetricName "ServiceUptime" -WarningAction SilentlyContinue -ErrorAction SilentlyContinue
+
+    if ($serviceUptime) {
+
+        $latestValue = $serviceUptime.Data | Select-Object -Last 1
+
+        $serviceName = ($service -split "/")[1]
+
+        Write-Host "Uptime for $serviceName: $($latestValue.Values[0])%"
+
+    }
+
+}
+
