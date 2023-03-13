@@ -1,0 +1,36 @@
+# Connect to Azure
+
+Connect-AzAccount
+
+# Get all running resources
+
+$resources = Get-AzResource | Where-Object {$_.ProvisioningState -eq 'Succeeded' -and $_.PowerState -eq 'Running'}
+
+# Get SLA information for each resource
+
+$slaList = foreach ($resource in $resources) {
+
+    $sla = Get-AzServiceLevelObjective -ResourceId $resource.ResourceId -WarningAction SilentlyContinue
+
+    if ($sla) {
+
+        [PSCustomObject]@{
+
+            Name = $resource.Name
+
+            ResourceId = $resource.ResourceId
+
+            Sla = $sla.DisplayName
+
+            SlaValue = $sla.SloValue
+
+        }
+
+    }
+
+}
+
+# Export the SLA information to a CSV file
+
+$slaList | Export-Csv -Path "C:\SLAReport.csv" -NoTypeInformation
+
